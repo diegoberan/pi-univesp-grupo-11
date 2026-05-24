@@ -12,12 +12,19 @@ Mapa interativo para buscar programas de pós-graduação no Brasil, com dados d
 ## Pré-requisitos
 
 - Python 3.10+
+- [uv](https://github.com/astral-sh/uv) (recomendado) ou pip
 
 ## Como rodar
 
+### Com uv (recomendado)
+
 ```bash
-# 1. Instalar dependências
-pip install -r requirements.txt
+# 1. Criar venv e instalar dependências
+uv venv .venv --python 3.10
+source .venv/bin/activate        # Linux/Mac
+# .venv\Scripts\activate         # Windows
+
+uv pip install -r requirements.txt
 
 # 2. Aplicar migrations
 python manage.py migrate
@@ -29,7 +36,15 @@ python manage.py importar_dados data/ies.csv data/cursos.csv
 python manage.py runserver
 ```
 
-> **Ambiente testado:** Python 3.10 (pyenv env `lewagon` ou equivalente com Django 5 instalado)
+### Com pip
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py importar_dados data/ies.csv data/cursos.csv
+python manage.py runserver
+```
 
 Acesse: http://127.0.0.1:8000
 
