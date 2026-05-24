@@ -1,0 +1,147 @@
+{% extends "ies/base.html" %}
+{% block title %}Consulta - Pos-Graduacao Brasil{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <h1 class="h3 mb-2">Consulta de IES</h1>
+        <p class="mb-0 opacity-75">Pesquise Instituicoes de Ensino Superior com filtros avancados</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Estado</label>
+                    <select name="uf" class="form-select">
+                        <option value="">Todos</option>
+                        {% for estado in estados %}
+                        <option value="{{ estado.sigla }}" {% if filtros.uf == estado.sigla %}selected{% endif %}>
+                            {{ estado.sigla }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        {% for s in status_list %}
+                        <option value="{{ s }}" {% if filtros.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Modalidade</label>
+                    <select name="modalidade" class="form-select">
+                        <option value="">Todas</option>
+                        <option value="mestrado" {% if filtros.modalidade == 'mestrado' %}selected{% endif %}>Mestrado</option>
+                        <option value="doutorado" {% if filtros.modalidade == 'doutorado' %}selected{% endif %}>Doutorado</option>
+                        <option value="especializacao" {% if filtros.modalidade == 'especializacao' %}selected{% endif %}>Especializacao</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Nota min. CAPES</label>
+                    <input type="number" name="nota_min" class="form-control"
+                           value="{{ filtros.nota_min }}" min="1" max="7" placeholder="1-7">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Busca</label>
+                    <input type="text" name="q" class="form-control"
+                           value="{{ filtros.q }}" placeholder="Nome ou sigla da IES...">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Acoes -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-muted">
+            {{ ies_list.paginator.count }} resultado{{ ies_list.paginator.count|pluralize }}
+        </span>
+        <a href="{% url 'ies:exportar_csv' %}?{{ request.GET.urlencode }}"
+           class="btn btn-outline-success btn-sm">
+            &#128229; Exportar CSV
+        </a>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Sigla</th>
+                    <th>Nome</th>
+                    <th>UF</th>
+                    <th>Status</th>
+                    <th>Mest.</th>
+                    <th>Dout.</th>
+                    <th>Esp.</th>
+                    <th>Nota CAPES</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ies in ies_list %}
+                <tr>
+                    <td>{{ ies.sigla }}</td>
+                    <td>{{ ies.nome|truncatewords:8 }}</td>
+                    <td>{{ ies.uf }}</td>
+                    <td>{{ ies.status_juridico }}</td>
+                    <td>{% if ies.mestrado %}&#9989;{% else %}&#10060;{% endif %}</td>
+                    <td>{% if ies.doutorado %}&#9989;{% else %}&#10060;{% endif %}</td>
+                    <td>{% if ies.especializacao %}&#9989;{% else %}&#10060;{% endif %}</td>
+                    <td>{{ ies.nota_pos_capes|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'ies:detalhe' ies.id %}" class="btn btn-sm btn-outline-primary">
+                            Detalhes
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                        Nenhuma IES encontrada com esses filtros.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginacao -->
+    {% if ies_list.has_other_pages %}
+    <nav>
+        <ul class="pagination justify-content-center">
+            {% if ies_list.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ ies_list.previous_page_number }}&{{ request.GET.urlencode }}">&laquo;</a>
+            </li>
+            {% endif %}
+
+            {% for num in ies_list.paginator.page_range %}
+                {% if ies_list.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > ies_list.number|add:'-3' and num < ies_list.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if ies_list.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ ies_list.next_page_number }}&{{ request.GET.urlencode }}">&raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

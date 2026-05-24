@@ -1,0 +1,132 @@
+{% extends "ies/base.html" %}
+{% block title %}{{ ies.sigla }} - Pos-Graduacao Brasil{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'ies:index' %}">Mapa</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'ies:consulta' %}">Consulta</a></li>
+            <li class="breadcrumb-item active">{{ ies.sigla|default:ies.nome }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Info da IES -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">{{ ies.nome }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><b>Sigla:</b> {{ ies.sigla|default:"-" }}</p>
+                            <p><b>UF:</b> {{ ies.uf }}</p>
+                            <p><b>Cidade:</b> {{ ies.cidade|default:"-" }}</p>
+                            <p><b>Endereco:</b> {{ ies.endereco|default:"-" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><b>Status Juridico:</b> {{ ies.status_juridico|default:"-" }}</p>
+                            <p><b>Area de Conhecimento:</b> {{ ies.area_conhecimento|default:"-" }}</p>
+                            <p><b>Nota CAPES (Pos):</b> {{ ies.nota_pos_capes|default:"-" }}</p>
+                            <p><b>Nota MEC (Esp.):</b> {{ ies.nota_especializacao|default:"-" }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5>Modalidades</h5>
+                    <div class="d-flex gap-3 mb-3">
+                        <span class="badge {% if ies.mestrado %}bg-success{% else %}bg-secondary{% endif %} p-2">
+                            Mestrado: {% if ies.mestrado %}Sim{% else %}Nao{% endif %}
+                        </span>
+                        <span class="badge {% if ies.doutorado %}bg-success{% else %}bg-secondary{% endif %} p-2">
+                            Doutorado: {% if ies.doutorado %}Sim{% else %}Nao{% endif %}
+                        </span>
+                        <span class="badge {% if ies.especializacao %}bg-success{% else %}bg-secondary{% endif %} p-2">
+                            Especializacao: {% if ies.especializacao %}Sim{% else %}Nao{% endif %}
+                        </span>
+                    </div>
+
+                    {% if ies.areas_pesquisa %}
+                    <hr>
+                    <h5>Areas de Pesquisa</h5>
+                    <p>{{ ies.areas_pesquisa }}</p>
+                    {% endif %}
+
+                    {% if ies.homepage %}
+                    <hr>
+                    <a href="{{ ies.homepage }}" target="_blank" class="btn btn-outline-primary">
+                        &#127760; Homepage da IES
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Cursos de Pos -->
+            {% if cursos %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Cursos de Pos-Graduacao ({{ cursos.count }})</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Curso</th>
+                                    <th>Grau</th>
+                                    <th>Conceito</th>
+                                    <th>Situacao</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for curso in cursos %}
+                                <tr>
+                                    <td>{{ curso.nome_curso }}</td>
+                                    <td>{{ curso.grau }}</td>
+                                    <td>{{ curso.conceito|default:"-" }}</td>
+                                    <td>{{ curso.situacao|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Mapa -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Localizacao</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div id="mapa-ies" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    {% if ies.latitude and ies.longitude %}
+    const mapa = L.map('mapa-ies').setView([{{ ies.latitude }}, {{ ies.longitude }}], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(mapa);
+    L.marker([{{ ies.latitude }}, {{ ies.longitude }}])
+        .addTo(mapa)
+        .bindPopup('<b>{{ ies.sigla }}</b><br>{{ ies.nome }}')
+        .openPopup();
+    {% else %}
+    document.getElementById('mapa-ies').innerHTML =
+        '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Coordenadas nao disponiveis</div>';
+    {% endif %}
+</script>
+{% endblock %}

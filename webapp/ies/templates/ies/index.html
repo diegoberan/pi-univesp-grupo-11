@@ -1,0 +1,128 @@
+{% extends "ies/base.html" %}
+{% block title %}Mapa - Pos-Graduacao Brasil{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <h1 class="h3 mb-2">Mapa Interativo</h1>
+        <p class="mb-0 opacity-75">Visualize programas de pos-graduacao em todo o Brasil</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filtros -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form id="filtros-mapa" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Estado (UF)</label>
+                    <select name="uf" id="filtro-uf" class="form-select">
+                        <option value="">Todos</option>
+                        {% for estado in estados %}
+                        <option value="{{ estado.sigla }}">{{ estado.sigla }} - {{ estado.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Status Juridico</label>
+                    <select name="status" id="filtro-status" class="form-select">
+                        <option value="">Todos</option>
+                        {% for s in status_list %}
+                        <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Modalidade</label>
+                    <select name="modalidade" id="filtro-modalidade" class="form-select">
+                        <option value="">Todas</option>
+                        <option value="mestrado">Mestrado</option>
+                        <option value="doutorado">Doutorado</option>
+                        <option value="especializacao">Especializacao</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Busca</label>
+                    <input type="text" name="q" id="filtro-busca" class="form-control" placeholder="Nome ou sigla...">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mapa -->
+    <div id="mapa"></div>
+    <div id="mapa-info" class="text-muted mt-2 small"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+    // Inicializar mapa centrado no Brasil
+    const mapa = L.map('mapa').setView([-14.5, -52], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18,
+    }).addTo(mapa);
+
+    let markersLayer = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+    });
+    mapa.addLayer(markersLayer);
+
+    function carregarIES() {
+        const uf = document.getElementById('filtro-uf').value;
+        const status = document.getElementById('filtro-status').value;
+        const modalidade = document.getElementById('filtro-modalidade').value;
+        const busca = document.getElementById('filtro-busca').value;
+
+        let url = '/api/ies/?limit=8000';
+        if (uf) url += '&uf=' + uf;
+        if (status) url += '&status=' + status;
+        if (modalidade) url += '&modalidade=' + modalidade;
+        if (busca) url += '&q=' + encodeURIComponent(busca);
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                markersLayer.clearLayers();
+                data.ies.forEach(ies => {
+                    let modalidades = [];
+                    if (ies.mestrado) modalidades.push('Mestrado');
+                    if (ies.doutorado) modalidades.push('Doutorado');
+                    if (ies.especializacao) modalidades.push('Especializacao');
+
+                    let popup = `
+                        <strong>${ies.sigla || ''}</strong> - ${ies.nome}<br>
+                        <small>${ies.endereco || ''}</small><br>
+                        <small><b>Status:</b> ${ies.status || 'N/I'} | <b>UF:</b> ${ies.uf}</small><br>
+                        ${modalidades.length ? '<small><b>Modalidades:</b> ' + modalidades.join(', ') + '</small><br>' : ''}
+                        ${ies.nota_capes ? '<small><b>Nota CAPES:</b> ' + ies.nota_capes + '</small><br>' : ''}
+                        ${ies.homepage ? '<a href="' + ies.homepage + '" target="_blank">Homepage</a><br>' : ''}
+                        <a href="/ies/${ies.id}/">Ver detalhes</a>
+                    `;
+
+                    let marker = L.marker([ies.lat, ies.lng])
+                        .bindPopup(popup);
+                    markersLayer.addLayer(marker);
+                });
+
+                document.getElementById('mapa-info').textContent =
+                    `${data.total} IES exibidas no mapa`;
+            });
+    }
+
+    document.getElementById('filtros-mapa').addEventListener('submit', function(e) {
+        e.preventDefault();
+        carregarIES();
+    });
+
+    // Carregar dados iniciais
+    carregarIES();
+</script>
+{% endblock %}

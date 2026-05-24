@@ -1,0 +1,214 @@
+{% extends "ies/base.html" %}
+{% block title %}Dashboard - Pos-Graduacao Brasil{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <h1 class="h3 mb-2">Dashboard Estatistico</h1>
+        <p class="mb-0 opacity-75">{{ total_ies }} IES cadastradas | {{ total_cursos }} cursos de pos-graduacao</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Cards resumo -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card card-dashboard text-center">
+                <div class="card-body">
+                    <h5 class="display-6 fw-bold text-primary">{{ total_ies }}</h5>
+                    <p class="text-muted mb-0">IES Cadastradas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-dashboard text-center">
+                <div class="card-body">
+                    <h5 class="display-6 fw-bold text-success">{{ total_cursos }}</h5>
+                    <p class="text-muted mb-0">Cursos de Pos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-dashboard text-center">
+                <div class="card-body">
+                    <h5 class="display-6 fw-bold text-info">27</h5>
+                    <p class="text-muted mb-0">Estados Cobertos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-dashboard text-center">
+                <div class="card-body">
+                    <h5 class="display-6 fw-bold text-warning">{{ cursos_por_grau|length }}</h5>
+                    <p class="text-muted mb-0">Graus Ofertados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- IES por UF -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0">IES por Estado (UF)</h5></div>
+                <div class="card-body">
+                    <canvas id="chart-uf"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- IES por Status -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0">IES por Status Juridico</h5></div>
+                <div class="card-body">
+                    <canvas id="chart-status"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Top Areas -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0">Top 15 Areas de Conhecimento</h5></div>
+                <div class="card-body">
+                    <canvas id="chart-areas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nota media por UF -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0">Nota Media CAPES por Estado</h5></div>
+                <div class="card-body">
+                    <canvas id="chart-nota"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cursos por Grau -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Cursos por Grau</h5></div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead><tr><th>Grau</th><th>Quantidade</th></tr></thead>
+                        <tbody>
+                            {% for item in cursos_por_grau %}
+                            <tr>
+                                <td>{{ item.grau|default:"Nao informado" }}</td>
+                                <td>{{ item.total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela top areas -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Areas de Conhecimento</h5></div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead><tr><th>Area</th><th>IES</th></tr></thead>
+                        <tbody>
+                            {% for item in top_areas %}
+                            <tr>
+                                <td>{{ item.area_conhecimento|truncatewords:6 }}</td>
+                                <td>{{ item.total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    fetch('/api/dashboard/')
+        .then(r => r.json())
+        .then(data => {
+            // Grafico IES por UF
+            new Chart(document.getElementById('chart-uf'), {
+                type: 'bar',
+                data: {
+                    labels: data.ies_por_uf.map(d => d.uf),
+                    datasets: [{
+                        label: 'IES',
+                        data: data.ies_por_uf.map(d => d.total),
+                        backgroundColor: '#1a237e',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Grafico Status
+            const cores = ['#1a237e', '#283593', '#3949ab', '#5c6bc0', '#7986cb', '#9fa8da'];
+            new Chart(document.getElementById('chart-status'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.ies_por_status.map(d => d.status_juridico),
+                    datasets: [{
+                        data: data.ies_por_status.map(d => d.total),
+                        backgroundColor: cores,
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            // Grafico Nota media por UF
+            new Chart(document.getElementById('chart-nota'), {
+                type: 'bar',
+                data: {
+                    labels: data.nota_por_uf.map(d => d.uf),
+                    datasets: [{
+                        label: 'Nota Media',
+                        data: data.nota_por_uf.map(d => d.media),
+                        backgroundColor: '#2e7d32',
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                }
+            });
+        });
+
+    // Top areas (dados inline do Django)
+    const areasLabels = [{% for item in top_areas %}'{{ item.area_conhecimento|truncatewords:4|escapejs }}',{% endfor %}];
+    const areasData = [{% for item in top_areas %}{{ item.total }},{% endfor %}];
+    new Chart(document.getElementById('chart-areas'), {
+        type: 'bar',
+        data: {
+            labels: areasLabels,
+            datasets: [{
+                label: 'IES',
+                data: areasData,
+                backgroundColor: '#e65100',
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } },
+        }
+    });
+</script>
+{% endblock %}
