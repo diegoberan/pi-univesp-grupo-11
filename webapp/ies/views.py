@@ -215,6 +215,8 @@ def dashboard(request):
     total_ies = IES.objects.count()
     total_cursos = CursoPos.objects.count()
 
+    total_estados = Estado.objects.values('sigla').distinct().count()
+
     context = {
         'ies_por_uf': list(ies_por_uf),
         'ies_por_status': list(ies_por_status),
@@ -223,6 +225,7 @@ def dashboard(request):
         'cursos_por_grau': list(cursos_por_grau),
         'total_ies': total_ies,
         'total_cursos': total_cursos,
+        'total_estados': total_estados,
     }
     return render(request, 'ies/dashboard.html', context)
 
