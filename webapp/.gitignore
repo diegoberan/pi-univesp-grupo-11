@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
-*.sqlite3
+# db excluido do gitignore para deploy Railway
+# *.sqlite3
 *.pyc
 .env
 staticfiles/
