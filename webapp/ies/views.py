@@ -2,7 +2,7 @@ import csv
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
-from django.db.models import Count, Avg, Q
+from django.db.models import Count, Avg, Q, F
 from .models import IES, CursoPos, Estado, Cidade
 
 
@@ -201,7 +201,7 @@ def dashboard(request):
     # Nota media CAPES por UF (dos cursos, 1-7 reais)
     nota_por_uf = (CursoPos.objects
                    .exclude(conceito__isnull=True)
-                   .values('ies__uf')
+                   .values(uf=F('ies__uf'))
                    .annotate(media_nota=Avg('conceito'))
                    .order_by('-media_nota'))
 
@@ -235,7 +235,7 @@ def api_dashboard(request):
     ies_por_uf = list(IES.objects.values('uf').annotate(total=Count('id')).order_by('-total'))
     ies_por_status = list(IES.objects.values('status_juridico').annotate(total=Count('id')).order_by('-total'))
     nota_por_uf = list(CursoPos.objects.exclude(conceito__isnull=True)
-                       .values('ies__uf').annotate(media=Avg('conceito')).order_by('-media'))
+                       .values(uf=F('ies__uf')).annotate(media=Avg('conceito')).order_by('-media'))
 
     return JsonResponse({
         'ies_por_uf': ies_por_uf,
