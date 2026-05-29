@@ -102,6 +102,7 @@
 
     // Busca por endereco/CEP com Nominatim (OpenStreetMap)
     let circuloDestaque = null;
+    let ultimaBusca = null; // {lat, lng, iesData}
     
     function calcularDistancia(lat1, lng1, lat2, lng2) {
         const R = 6371; // raio da Terra em km
@@ -112,6 +113,50 @@
                   Math.sin(dLng/2) * Math.sin(dLng/2);
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
+
+    function atualizarMarcadoresRaio() {
+        if (!ultimaBusca) return;
+        const raioKm = parseInt(document.getElementById('filtro-raio').value);
+        const {lat, lng, iesData} = ultimaBusca;
+        
+        // Atualiza circulo
+        if (circuloDestaque) {
+            circuloDestaque.setRadius(raioKm * 1000);
+        }
+        
+        markersLayer.clearLayers();
+        let visiveis = 0;
+        
+        iesData.ies.forEach(ies => {
+            const dist = calcularDistancia(lat, lng, ies.lat, ies.lng);
+            if (dist > raioKm) return;
+            visiveis++;
+            
+            let modalidades = [];
+            if (ies.mestrado) modalidades.push('Mestrado');
+            if (ies.doutorado) modalidades.push('Doutorado');
+            if (ies.especializacao) modalidades.push('Especializacao');
+
+            let popup = `<strong>${ies.sigla || ''}</strong> - ${ies.nome}<br>
+                <small>${ies.endereco || ''}</small><br>
+                <small><b>Distancia:</b> ${dist.toFixed(1)} km</small><br>
+                <small><b>UF:</b> ${ies.uf} | <b>Status:</b> ${ies.status || 'N/I'}</small><br>
+                ${modalidades.length ? '<small><b>Modalidades:</b> ' + modalidades.join(', ') + '</small><br>' : ''}
+                ${ies.nota_capes ? '<small><b>Nota CAPES:</b> ' + ies.nota_capes + '</small><br>' : ''}
+                <a href="/ies/${ies.id}/">Ver detalhes</a>`;
+
+            let marker = L.marker([ies.lat, ies.lng]).bindPopup(popup);
+            markersLayer.addLayer(marker);
+        });
+        
+        document.getElementById('mapa-info').textContent = 
+            `${visiveis} IES num raio de ${raioKm} km do endereco buscado`;
+    }
+
+    // Atualizar mapa ao mudar o raio
+    document.getElementById('filtro-raio').addEventListener('change', function() {
+        atualizarMarcadoresRaio();
+    });
 
     document.getElementById('btn-buscar').addEventListener('click', function() {
         const query = document.getElementById('busca-endereco').value.trim();
@@ -175,40 +220,14 @@
             .bindPopup(`<strong>📍 Local buscado</strong><br>${displayName.substring(0, 100)}`)
             .addTo(mapa);
 
-            // Filtrar IES por distancia (opcional - recarrega com filtro)
-            // Usa a API existente e filtra no cliente
+            // Filtrar IES por distancia e guardar para uso futuro
             const apiUrl = `/api/ies/?limit=8000&uf=${document.getElementById('filtro-uf').value}&modalidade=${document.getElementById('filtro-modalidade').value}&status=${document.getElementById('filtro-status').value}&q=${encodeURIComponent(document.getElementById('filtro-busca').value)}`;
             
             fetch(apiUrl)
                 .then(r => r.json())
                 .then(iesData => {
-                    markersLayer.clearLayers();
-                    let visiveis = 0;
-                    
-                    iesData.ies.forEach(ies => {
-                        const dist = calcularDistancia(lat, lng, ies.lat, ies.lng);
-                        if (dist > raioKm) return;
-                        visiveis++;
-                        
-                        let modalidades = [];
-                        if (ies.mestrado) modalidades.push('Mestrado');
-                        if (ies.doutorado) modalidades.push('Doutorado');
-                        if (ies.especializacao) modalidades.push('Especializacao');
-
-                        let popup = `<strong>${ies.sigla || ''}</strong> - ${ies.nome}<br>
-                            <small>${ies.endereco || ''}</small><br>
-                            <small><b>Distancia:</b> ${dist.toFixed(1)} km</small><br>
-                            <small><b>UF:</b> ${ies.uf} | <b>Status:</b> ${ies.status || 'N/I'}</small><br>
-                            ${modalidades.length ? '<small><b>Modalidades:</b> ' + modalidades.join(', ') + '</small><br>' : ''}
-                            ${ies.nota_capes ? '<small><b>Nota CAPES:</b> ' + ies.nota_capes + '</small><br>' : ''}
-                            <a href="/ies/${ies.id}/">Ver detalhes</a>`;
-
-                        let marker = L.marker([ies.lat, ies.lng]).bindPopup(popup);
-                        markersLayer.addLayer(marker);
-                    });
-                    
-                    document.getElementById('mapa-info').textContent = 
-                        `${visiveis} IES num raio de ${raioKm} km do endereco buscado`;
+                    ultimaBusca = {lat, lng, iesData};
+                    atualizarMarcadoresRaio();
                 });
         })
         .catch(err => {
