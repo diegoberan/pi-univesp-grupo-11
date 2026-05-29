@@ -10,6 +10,31 @@
 </div>
 
 <div class="container">
+    <!-- Busca por endereco/CEP -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">Buscar endereco</label>
+                    <div class="input-group">
+                        <input type="text" id="busca-endereco" class="form-control" placeholder="Ex: Rua XV de Novembro, Sao Paulo, SP ou CEP 01001-000">
+                        <button id="btn-buscar" class="btn btn-success">🔍 Ir ate la</button>
+                    </div>
+                    <div id="busca-status" class="form-text"></div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Raio (km)</label>
+                    <select id="filtro-raio" class="form-select">
+                        <option value="50">50 km</option>
+                        <option value="100" selected>100 km</option>
+                        <option value="200">200 km</option>
+                        <option value="500">500 km</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Filtros -->
     <div class="card mb-3">
         <div class="card-body">
@@ -75,6 +100,134 @@
     });
     mapa.addLayer(markersLayer);
 
+    // Busca por endereco/CEP com Nominatim (OpenStreetMap)
+    let circuloDestaque = null;
+    
+    function calcularDistancia(lat1, lng1, lat2, lng2) {
+        const R = 6371; // raio da Terra em km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    document.getElementById('btn-buscar').addEventListener('click', function() {
+        const query = document.getElementById('busca-endereco').value.trim();
+        const statusEl = document.getElementById('busca-status');
+        
+        if (!query) {
+            statusEl.textContent = 'Digite um endereco ou CEP';
+            return;
+        }
+
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Buscando...';
+        statusEl.textContent = '';
+
+        // Geocodificacao com Nominatim
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(query)}`;
+        
+        fetch(url, {
+            headers: { 'User-Agent': 'PI-UNIVESP-PosGraduacaoBrasil/1.0' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = '🔍 Ir ate la';
+            
+            if (data.length === 0) {
+                statusEl.textContent = 'Endereco nao encontrado. Tente "Cidade, UF" ou CEP.';
+                return;
+            }
+
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            const displayName = data[0].display_name;
+            const raioKm = parseInt(document.getElementById('filtro-raio').value);
+
+            statusEl.textContent = `📍 ${displayName.substring(0, 80)}...`;
+
+            // Move o mapa ate o local
+            mapa.setView([lat, lng], 11);
+            
+            // Remove circulo anterior
+            if (circuloDestaque) {
+                mapa.removeLayer(circuloDestaque);
+            }
+            
+            // Adiciona circulo de raio
+            circuloDestaque = L.circle([lat, lng], {
+                radius: raioKm * 1000,
+                color: '#198754',
+                fillColor: '#198754',
+                fillOpacity: 0.08,
+                weight: 2
+            }).addTo(mapa);
+            
+            // Adiciona marcador no local buscado
+            L.marker([lat, lng], {
+                draggable: false,
+                opacity: 0.7
+            })
+            .bindPopup(`<strong>📍 Local buscado</strong><br>${displayName.substring(0, 100)}`)
+            .addTo(mapa);
+
+            // Filtrar IES por distancia (opcional - recarrega com filtro)
+            // Usa a API existente e filtra no cliente
+            const apiUrl = `/api/ies/?limit=8000&uf=${document.getElementById('filtro-uf').value}&modalidade=${document.getElementById('filtro-modalidade').value}&status=${document.getElementById('filtro-status').value}&q=${encodeURIComponent(document.getElementById('filtro-busca').value)}`;
+            
+            fetch(apiUrl)
+                .then(r => r.json())
+                .then(iesData => {
+                    markersLayer.clearLayers();
+                    let visiveis = 0;
+                    
+                    iesData.ies.forEach(ies => {
+                        const dist = calcularDistancia(lat, lng, ies.lat, ies.lng);
+                        if (dist > raioKm) return;
+                        visiveis++;
+                        
+                        let modalidades = [];
+                        if (ies.mestrado) modalidades.push('Mestrado');
+                        if (ies.doutorado) modalidades.push('Doutorado');
+                        if (ies.especializacao) modalidades.push('Especializacao');
+
+                        let popup = `<strong>${ies.sigla || ''}</strong> - ${ies.nome}<br>
+                            <small>${ies.endereco || ''}</small><br>
+                            <small><b>Distancia:</b> ${dist.toFixed(1)} km</small><br>
+                            <small><b>UF:</b> ${ies.uf} | <b>Status:</b> ${ies.status || 'N/I'}</small><br>
+                            ${modalidades.length ? '<small><b>Modalidades:</b> ' + modalidades.join(', ') + '</small><br>' : ''}
+                            ${ies.nota_capes ? '<small><b>Nota CAPES:</b> ' + ies.nota_capes + '</small><br>' : ''}
+                            <a href="/ies/${ies.id}/">Ver detalhes</a>`;
+
+                        let marker = L.marker([ies.lat, ies.lng]).bindPopup(popup);
+                        markersLayer.addLayer(marker);
+                    });
+                    
+                    document.getElementById('mapa-info').textContent = 
+                        `${visiveis} IES num raio de ${raioKm} km do endereco buscado`;
+                });
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.textContent = '🔍 Ir ate la';
+            statusEl.textContent = 'Erro ao buscar. Tente novamente.';
+            console.error(err);
+        });
+    });
+
+    // Permitir buscar com Enter
+    document.getElementById('busca-endereco').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('btn-buscar').click();
+        }
+    });
+
+    // Funcoes existentes do mapa
     function carregarIES() {
         const uf = document.getElementById('filtro-uf').value;
         const status = document.getElementById('filtro-status').value;
