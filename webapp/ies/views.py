@@ -198,11 +198,11 @@ def dashboard(request):
                  .annotate(total=Count('id'))
                  .order_by('-total')[:15])
 
-    # Nota media CAPES por UF
-    nota_por_uf = (IES.objects
-                   .exclude(nota_pos_capes__isnull=True)
-                   .values('uf')
-                   .annotate(media_nota=Avg('nota_pos_capes'))
+    # Nota media CAPES por UF (dos cursos, 1-7 reais)
+    nota_por_uf = (CursoPos.objects
+                   .exclude(conceito__isnull=True)
+                   .values('ies__uf')
+                   .annotate(media_nota=Avg('conceito'))
                    .order_by('-media_nota'))
 
     # Cursos por grau
@@ -234,8 +234,8 @@ def api_dashboard(request):
     """API JSON para dados do dashboard"""
     ies_por_uf = list(IES.objects.values('uf').annotate(total=Count('id')).order_by('-total'))
     ies_por_status = list(IES.objects.values('status_juridico').annotate(total=Count('id')).order_by('-total'))
-    nota_por_uf = list(IES.objects.exclude(nota_pos_capes__isnull=True)
-                       .values('uf').annotate(media=Avg('nota_pos_capes')).order_by('-media'))
+    nota_por_uf = list(CursoPos.objects.exclude(conceito__isnull=True)
+                       .values('ies__uf').annotate(media=Avg('conceito')).order_by('-media'))
 
     return JsonResponse({
         'ies_por_uf': ies_por_uf,
