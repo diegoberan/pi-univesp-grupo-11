@@ -42,6 +42,13 @@ def api_ies(request):
     if busca:
         qs = qs.filter(Q(nome__icontains=busca) | Q(sigla__icontains=busca))
 
+    area = request.GET.get('area')
+    if area:
+        qs = qs.filter(
+            Q(area_conhecimento__icontains=area) |
+            Q(cursos_pos__area_conhecimento__icontains=area)
+        ).distinct()
+
     # Limite para performance no mapa
     limit = int(request.GET.get('limit', 5000))
     qs = qs[:limit]
@@ -99,6 +106,13 @@ def consulta(request):
     if busca:
         qs = qs.filter(Q(nome__icontains=busca) | Q(sigla__icontains=busca))
 
+    area = request.GET.get('area')
+    if area:
+        qs = qs.filter(
+            Q(area_conhecimento__icontains=area) |
+            Q(cursos_pos__area_conhecimento__icontains=area)
+        ).distinct()
+
     # Paginacao
     paginator = Paginator(qs, 25)
     page = request.GET.get('page', 1)
@@ -117,6 +131,7 @@ def consulta(request):
             'modalidade': modalidade or '',
             'nota_min': nota_min or '',
             'q': busca or '',
+            'area': area or '',
         }
     }
     return render(request, 'ies/consulta.html', context)
@@ -133,6 +148,25 @@ def exportar_csv(request):
     status = request.GET.get('status')
     if status:
         qs = qs.filter(status_juridico=status)
+    modalidade = request.GET.get('modalidade')
+    if modalidade == 'mestrado':
+        qs = qs.filter(mestrado=True)
+    elif modalidade == 'doutorado':
+        qs = qs.filter(doutorado=True)
+    elif modalidade == 'especializacao':
+        qs = qs.filter(especializacao=True)
+    nota_min = request.GET.get('nota_min')
+    if nota_min:
+        try:
+            qs = qs.filter(nota_pos_capes__gte=int(nota_min))
+        except ValueError:
+            pass
+    area = request.GET.get('area')
+    if area:
+        qs = qs.filter(
+            Q(area_conhecimento__icontains=area) |
+            Q(cursos_pos__area_conhecimento__icontains=area)
+        ).distinct()
     busca = request.GET.get('q')
     if busca:
         qs = qs.filter(Q(nome__icontains=busca) | Q(sigla__icontains=busca))

@@ -1,5 +1,5 @@
 {% extends "ies/base.html" %}
-{% block title %}Mapa - Pos-Graduacao Brasil{% endblock %}
+{% block title %}Mapa - P&oacute;s-Gradua&ccedil;&atilde;o Brasil{% endblock %}
 
 {% block content %}
 <div class="hero">
@@ -69,6 +69,10 @@
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Busca</label>
                     <input type="text" name="q" id="filtro-busca" class="form-control" placeholder="Nome ou sigla...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">&Aacute;rea</label>
+                    <input type="text" name="area" id="filtro-area" class="form-control" placeholder="Ex: Direito, Engenharia">
                 </div>
                 <div class="col-md-1">
                     <button type="submit" class="btn btn-primary w-100">Filtrar</button>
@@ -238,7 +242,7 @@
             .addTo(mapa);
 
             // Filtrar IES por distancia e guardar para uso futuro
-            const apiUrl = `/api/ies/?limit=8000&uf=${document.getElementById('filtro-uf').value}&modalidade=${document.getElementById('filtro-modalidade').value}&status=${document.getElementById('filtro-status').value}&q=${encodeURIComponent(document.getElementById('filtro-busca').value)}`;
+            const apiUrl = `/api/ies/?limit=8000&uf=${document.getElementById('filtro-uf').value}&modalidade=${document.getElementById('filtro-modalidade').value}&status=${document.getElementById('filtro-status').value}&q=${encodeURIComponent(document.getElementById('filtro-busca').value)}&area=${encodeURIComponent(document.getElementById('filtro-area').value)}`;
             
             fetch(apiUrl)
                 .then(r => r.json())
@@ -269,12 +273,14 @@
         const status = document.getElementById('filtro-status').value;
         const modalidade = document.getElementById('filtro-modalidade').value;
         const busca = document.getElementById('filtro-busca').value;
+        const area = document.getElementById('filtro-area').value;
 
         let url = '/api/ies/?limit=8000';
         if (uf) url += '&uf=' + uf;
         if (status) url += '&status=' + status;
         if (modalidade) url += '&modalidade=' + modalidade;
         if (busca) url += '&q=' + encodeURIComponent(busca);
+        if (area) url += '&area=' + encodeURIComponent(area);
 
         fetch(url)
             .then(r => r.json())

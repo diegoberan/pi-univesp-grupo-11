@@ -1,5 +1,5 @@
 {% extends "ies/base.html" %}
-{% block title %}Consulta - Pos-Graduacao Brasil{% endblock %}
+{% block title %}Consulta - P&oacute;s-Gradua&ccedil;&atilde;o Brasil{% endblock %}
 
 {% block content %}
 <div class="hero">
@@ -47,6 +47,11 @@
                     <label class="form-label fw-bold">Nota min. CAPES</label>
                     <input type="number" name="nota_min" class="form-control"
                            value="{{ filtros.nota_min }}" min="1" max="7" placeholder="1-7">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">&Aacute;rea</label>
+                    <input type="text" name="area" class="form-control"
+                           value="{{ filtros.area }}" placeholder="Ex: Direito, Engenharia">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Busca</label>
