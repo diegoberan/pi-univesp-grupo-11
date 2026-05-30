@@ -31,6 +31,9 @@
         [data-bs-theme="dark"] .form-select, [data-bs-theme="dark"] .form-control { background-color: #0d1117; color: #c9d1d9; border-color: #30363d; }
         [data-bs-theme="dark"] .btn-primary { --bs-btn-bg: #1a237e; --bs-btn-border-color: #1a237e; }
 
+        /* Mapa dark: filtro CSS nos tiles do OpenStreetMap */
+        .mapa-dark .leaflet-tile-pane img { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.1) !important; }
+
         /* Theme toggle */
         #btn-theme { cursor: pointer; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
         #btn-theme:hover { background: rgba(255,255,255,0.15); }

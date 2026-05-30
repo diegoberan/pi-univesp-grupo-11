@@ -91,29 +91,24 @@
     const mapa = L.map('mapa').setView([-14.5, -52], 4);
 
     // Tiles padrao OpenStreetMap
-    const tilesOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 18,
     }).addTo(mapa);
 
-    // Escutar mudanca de tema - aplica filtro CSS nos tiles
-    function aplicarTemaEscuro(escuro) {
-        const tileEls = document.querySelectorAll('#mapa .leaflet-tile-pane img');
-        tileEls.forEach(img => {
-            img.style.filter = escuro ? 'invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.1)' : '';
-        });
-        // Tambem aplica nos tiles que vao carregar depois
-        const observer = escuro ? new MutationObserver(() => aplicarTemaEscuro(true)) : null;
-        if (observer) observer.observe(document.querySelector('#mapa .leaflet-tile-pane'), { childList: true, attributes: true });
-    }
-
+    // Escutar mudanca de tema - aplica/remove classe CSS no container
     window.addEventListener('themechange', function(e) {
-        aplicarTemaEscuro(e.detail === 'dark');
+        const container = document.getElementById('mapa');
+        if (e.detail === 'dark') {
+            container.classList.add('mapa-dark');
+        } else {
+            container.classList.remove('mapa-dark');
+        }
     });
 
     // Aplica tema inicial se ja estiver escuro
     if (document.documentElement.getAttribute('data-bs-theme') === 'dark') {
-        aplicarTemaEscuro(true);
+        document.getElementById('mapa').classList.add('mapa-dark');
     }
 
     let markersLayer = L.markerClusterGroup({
